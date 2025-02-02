@@ -86,20 +86,20 @@ const char* getIcon(long unsigned int offset) {
 
 const char* getColor(long unsigned int offset) {
     const char* terminal_colors[] = {
-        "\033[97m", // Black (#000000)
-        "\033[36m", // Cyan (#074750, #009191)
-        "\033[36m", // Cyan (#009191)
-        "\033[35m", // Magenta (#FF6CB6)
-        "\033[35m", // Magenta (#FFB5DA)
-        "\033[35m", // Magenta (#490092)
-        "\033[34m", // Blue (#006CDB)
-        "\033[35m", // Magenta (#B66DFF)
-        "\033[34m", // Blue (#6DB5FE)
-        "\033[34m", // Blue (#B5DAFE)
-        "\033[31m", // Red (#920000)
-        "\033[33m", // Yellow (#924900)
-        "\033[33m", // Yellow (#DB6D00)
-        "\033[32m", // Green (#24FE23)
+        "\033[38;2;255;255;255m",
+        "\033[38;2;7;71;80m",
+        "\033[38;2;0;145;145m",
+        "\033[38;2;255;108;182m",
+        "\033[38;2;255;181;218m",
+        "\033[38;2;73;0;146m",
+        "\033[38;2;0;108;219m",
+        "\033[38;2;182;109;255m",
+        "\033[38;2;109;181;254m",
+        "\033[38;2;181;218;254m",
+        "\033[38;2;146;0;0m",
+        "\033[38;2;146;73;0m",
+        "\033[38;2;219;109;0m",
+        "\033[38;2;36;254;35m"
     };
 
     unsigned int index = offset % (sizeof(terminal_colors) / sizeof(terminal_colors[0]));
@@ -392,7 +392,6 @@ int lpcli_main(int argc, char **argv)
 	}
 	else
 	{
-
 		printf("%s\n", ctx.buffer);
 	}
 
