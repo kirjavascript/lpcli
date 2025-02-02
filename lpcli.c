@@ -83,9 +83,10 @@ const char* getIcon(long unsigned int offset) {
     return icons[index];
 }
 
+
 const char* getColor(long unsigned int offset) {
     const char* terminal_colors[] = {
-        "\033[30m", // Black (#000000)
+        "\033[97m", // Black (#000000)
         "\033[36m", // Cyan (#074750, #009191)
         "\033[36m", // Cyan (#009191)
         "\033[35m", // Magenta (#FF6CB6)
@@ -375,7 +376,7 @@ int lpcli_main(int argc, char **argv)
         offset = (offset << 8) + passwd_hash[i];
 
         if ((i + 1) % 3 == 0) {
-            printf("%s%s", getColor(offset), getIcon(offset));
+            printf(" %s%s", getColor(offset), getIcon(offset));
             offset = 0;
         }
     }
