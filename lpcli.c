@@ -371,14 +371,13 @@ int lpcli_main(int argc, char **argv)
 
     long unsigned int offset = 0;
 
-    for (int i = 0; ; i++) {
-        if (i != 0 && i % 3 == 0) {
+    for (int i = 0; i < 9; i++) {
+        offset = (offset << 8) + passwd_hash[i];
+
+        if ((i + 1) % 3 == 0) {
             printf("%s%s", getColor(offset), getIcon(offset));
             offset = 0;
-            if (i == 9) break;
         }
-        offset <<= 8;
-        offset += passwd_hash[i];
     }
 
     printf("\033[0m\n");
