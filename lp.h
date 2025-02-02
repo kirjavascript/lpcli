@@ -42,11 +42,11 @@ typedef struct lp_ctx_st
 	unsigned version;
 	unsigned keylen;
 	unsigned iterations;
-	
+
 	unsigned counter;
 	unsigned length;
 	unsigned charsets;
-	
+
 	uint32_t entropy[ENT_LEN];
 	HMAC_SHA256_CTX hmac;
 	unsigned buflen;
@@ -61,7 +61,7 @@ typedef enum
 	LP_ERR_KEYLEN,  // keylen is not 32 (internal)
 	LP_ERR_ITER,    // iterations is not 100000 (internal)
 	//LP_ERR_DIGEST,  // digest is not sha256 (internal)
-	
+
 	LP_ERR_LENGTH,  // passlen out of range
 	LP_ERR_COUNTER, // counter out of range
 	LP_ERR_FLAGS,   // no charsets flags selected
@@ -72,7 +72,7 @@ typedef enum
 	LP_ERR_NULL_SECRET,
 	LP_ERR_LONG_SECRET, // (>=LPMAXSTRLEN)
 	LP_ERR_NULL_PASS
-	
+
 } lp_error;
 
 LP_DEF void LP_CTX_init(LP_CTX *ctx);
@@ -129,10 +129,10 @@ static void init_entropy(uint32_t *ent, uint8_t *buffer, uint32_t buflen)
 	unsigned l = 0;
 	for (uint8_t *s = buffer + buflen - 4; s >= buffer; s -= 4)
 	{
-		ent[l++] = (uint32_t) s[0] << 24 | (uint32_t) s[1] << 16 | 
+		ent[l++] = (uint32_t) s[0] << 24 | (uint32_t) s[1] << 16 |
 		           (uint32_t) s[2] <<  8 | (uint32_t) s[3];
 	}
-	
+
 	for (l = buflen / 4; l < ENT_LEN; l++)
 	{
 		ent[l] = 0;
@@ -147,10 +147,10 @@ static uint32_t div_entropy(uint32_t *ent, uint32_t d)
 		if (ent[i] != 0)
 			break;
 	}
-	
+
 	if (i == -1)
 		return 0;
-		
+
 	uint64_t qt = 0;
 	uint64_t r = 0;
 	for (; i >= 0; i--)
@@ -184,7 +184,7 @@ static unsigned mystrnlen(const char *s, unsigned max)
 {
 	if (!s || !*s)
 		return 0;
-		
+
 	unsigned i;
 	for (i = 0; (i < max) && s[i]; i++);
 	return i;
@@ -201,7 +201,7 @@ static unsigned myhexlen(unsigned u)
 {
 	if (u == 0)
 		return 1;
-		
+
 	unsigned d;
 	for (d = 0; u; d++)
 	{
@@ -213,7 +213,7 @@ static unsigned myhexlen(unsigned u)
 static void mysprinthex(char *dst, unsigned dlen, unsigned u)
 {
 	static const char hexchars[] = "0123456789abcdef"; //version 2 uses small letters
-	
+
 	for (unsigned d = dlen; d > 0; d--)
 	{
 		dst[d - 1] = hexchars[u & 0xF];
@@ -240,14 +240,14 @@ static unsigned generate(LP_CTX *ctx, const char *secret, unsigned secretlen)
 	// Create entropy number from PBKDF2
 	pbkdf2_sha256(&ctx->hmac, (uint8_t *) secret, secretlen,
 	    (uint8_t *) ctx->buffer, ctx->buflen, ctx->iterations, ctx->keybuf, LP_KEYLEN);
-	    
+
 	init_entropy(ctx->entropy, ctx->keybuf, LP_KEYLEN);
-	
+
 	// Select len (= length - numsets) characters from the merged charset
 	const charset_t *charset = &cslist[ctx->charsets & LP_CSF_ALL];
 	unsigned len = ctx->length - charset->numsets;
 	generate_chars(ctx, ctx->buffer, len, charset->value, charset->length);
-	
+
 	// Select numsets characters (one from each subset of charset)
 	unsigned offset = 0;
 	for (unsigned i = 0; i < charset->numsets; i++)
@@ -255,13 +255,13 @@ static unsigned generate(LP_CTX *ctx, const char *secret, unsigned secretlen)
 		ctx->buffer[len + i] = generate_char(ctx, charset->value + offset, charset->lensets[i]);
 		offset += charset->lensets[i];
 	}
-	
+
 	// Combine last numsets characters into the first len characters
 	for (; len < ctx->length; len++)
 	{
 		mypushchar(ctx->buffer, len + 1, generate_int(ctx, len), ctx->buffer[len]);
 	}
-	
+
 	ctx->buffer[len] = 0;
 	ctx->buflen = len;
 	return len;
@@ -272,7 +272,7 @@ LP_DEF void LP_CTX_init(LP_CTX *ctx)
 	ctx->version = LP_VER;
 	ctx->keylen = LP_KEYLEN;
 	ctx->iterations = LP_ITERS;
-	
+
 	ctx->counter = LP_COUNTER_DEF;
 	ctx->length = LP_LENGTH_DEF;
 	ctx->charsets = LP_CSF_DEF;
@@ -308,24 +308,24 @@ LP_DEF int LP_generate(LP_CTX *ctx, const char *site,  const char *login, const 
 	LP_ASSERT(ctx->version == 2, VERSION);
 	LP_ASSERT(ctx->keylen == LP_KEYLEN, KEYLEN);
 	LP_ASSERT(ctx->iterations == LP_ITERS, ITER);
-	
+
 	LP_ASSERT(site, NULL_SITE);
 	LP_ASSERT(login, NULL_LOGIN);
 	LP_ASSERT(secret, NULL_SECRET);
-	
+
 	LP_ASSERT(LP_check_length(ctx->length), LENGTH);
 	LP_ASSERT(LP_check_counter(ctx->counter), COUNTER);
 	LP_ASSERT(LP_check_charsets(ctx->charsets), FLAGS);
-	
+
 	unsigned sitelen  = mystrnlen(site, LPMAXSTRLEN);
 	unsigned loginlen = mystrnlen(login, LPMAXSTRLEN);
 	unsigned ctrlen   = myhexlen(ctx->counter);
 	unsigned saltlen = sitelen + loginlen + ctrlen;
 	LP_ASSERT(saltlen < LPMAXSTRLEN, LONG_SALT);
-	
+
 	unsigned secretlen = mystrnlen(secret, LPMAXSTRLEN);
 	LP_ASSERT(secretlen < LPMAXSTRLEN, LONG_SECRET);
-	
+
 	// Create salt string in ctx->buffer: site|login|hex(counter)
 	char *p = ctx->buffer;
 	mymemcpy(p, site, sitelen);
@@ -334,7 +334,7 @@ LP_DEF int LP_generate(LP_CTX *ctx, const char *site,  const char *login, const 
 	p += loginlen;
 	mysprinthex(p, ctrlen, ctx->counter);
 	ctx->buflen = saltlen;
-	
+
 	return (int) generate(ctx, secret, secretlen);
 }
 #undef LP_ASSERT

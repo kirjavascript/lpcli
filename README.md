@@ -1,5 +1,8 @@
+fork of [monolifed/lpcli](https://github.com/monolifed/lpcli) - adds the password fingerprinting feature from the webapp
+
 # LPCLI
 C implementation of lesspass (version 2) without any external dependencies `*`.
+
 
 
 ## Usage

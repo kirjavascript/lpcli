@@ -61,8 +61,48 @@ int print_error(const char *format, ...)
 	vfprintf(stderr, format, args);
 	va_end(args);
 	fflush(stderr);
-	
+
 	return LPCLI_FAIL;
+}
+
+void hmac_sha256(const char *key, const char *salt, uint8_t *output) {
+    HMAC_SHA256_CTX hmac;
+    hmac_sha256_init(&hmac, (uint8_t *)key, strlen(key));
+    hmac_sha256_update(&hmac, (uint8_t *)salt, strlen(salt));
+    hmac_sha256_final(&hmac, output);
+}
+
+const char* getIcon(long unsigned int offset) {
+    const char* icons[] = {
+        "🏷️", "❤️", "🛏️", "🏫", "🔌", "🚑", "🚌", "🚗", "✈️", "🚀", "🚢", "🚇",
+        "🚚", "💴", "💶", "₿", "💵", "💷", "🗄️", "📊", "🛏️", "🍺", "🔔", "🔭",
+        "🎂", "💣", "💼", "🐛", "📷", "🛒", "📜", "☕", "☁️", "☕", "💬", "🧊",
+        "🍴", "🗄️", "💎", "❗", "👁️", "🚩", "🧪", "⚽", "🎮", "🎓"
+    };
+    unsigned long int index = offset % (sizeof(icons) / sizeof(icons[0]));
+    return icons[index];
+}
+
+const char* getColor(long unsigned int offset) {
+    const char* terminal_colors[] = {
+        "\033[30m", // Black (#000000)
+        "\033[36m", // Cyan (#074750, #009191)
+        "\033[36m", // Cyan (#009191)
+        "\033[35m", // Magenta (#FF6CB6)
+        "\033[35m", // Magenta (#FFB5DA)
+        "\033[35m", // Magenta (#490092)
+        "\033[34m", // Blue (#006CDB)
+        "\033[35m", // Magenta (#B66DFF)
+        "\033[34m", // Blue (#6DB5FE)
+        "\033[34m", // Blue (#B5DAFE)
+        "\033[31m", // Red (#920000)
+        "\033[33m", // Yellow (#924900)
+        "\033[33m", // Yellow (#DB6D00)
+        "\033[32m", // Green (#24FE23)
+    };
+
+    unsigned int index = offset % (sizeof(terminal_colors) / sizeof(terminal_colors[0]));
+    return terminal_colors[index];
 }
 
 //#define PRINT_ERROR(X,...) print_error(errstr[ERR_##A],__VA_ARGS__)
@@ -114,30 +154,30 @@ static int read_args(int argc, char **argv, LPCLI_OPTS *opts)
 {
 	if (argc < 2)
 		return LPCLI_FAIL;
-		
+
 	int i = 0;
 	char *ptr;
 	char *ptrEnd;
 	ptr = argv[++i];
 	opts->site = ptr;
 	ptr = argv[++i]; // next
-	
+
 	opts->login = "";
 	if (ptr && *ptr != '-')
 	{
 		opts->login = ptr;
 		ptr = argv[++i]; // next
 	}
-	
+
 	//if (ptr && *ptr != '-')
 	//{
 	//	opts->password = ptr;
 	//	set_option(opts, OPTS_PASSWORD);
 	//	ptr = argv[++i]; // next
 	//}
-	
+
 	bool post_shopt = false; // is it just after a short option?
-	
+
 	while (argv[i])
 	{
 		if (!post_shopt)
@@ -146,7 +186,7 @@ static int read_args(int argc, char **argv, LPCLI_OPTS *opts)
 				return LPCLI_FAIL;
 			ptr++;
 		}
-		
+
 		switch (*ptr)
 		{
 		case '\0': // -
@@ -275,21 +315,21 @@ int lpcli_main(int argc, char **argv)
 	{
 		return print_usage();
 	}
-	
+
 	LPCLI_OPTS options = {0};
 	if (read_args(argc, argv, &options) != LPCLI_OK)
 	{
 		return print_error(errstr[ERR_OPTION]);
 	}
-	
+
 	LP_CTX ctx;
 	LP_CTX_init(&ctx);
-	
+
 	if (is_option_set(&options, OPTS_CHARSETS))
 	{
 		ctx.charsets = options.charsets;
 	}
-	
+
 	if (is_option_set(&options, OPTS_LENGTH))
 	{
 		if (!LP_check_length(options.length))
@@ -298,7 +338,7 @@ int lpcli_main(int argc, char **argv)
 		}
 		ctx.length = options.length;
 	}
-	
+
 	if (is_option_set(&options, OPTS_COUNTER))
 	{
 		if (!LP_check_counter(options.counter))
@@ -307,26 +347,44 @@ int lpcli_main(int argc, char **argv)
 		}
 		ctx.counter = options.counter;
 	}
-	
+
 	print_options(&ctx);
-	
+
 	char passwd_in[LPMAXSTRLEN];
 	if (lpcli_readpassword("Enter Password: ", passwd_in, sizeof passwd_in) != LPCLI_OK)
 	{
 		return print_error(errstr[ERR_PASSWORD]);
 	}
-	
+
 	int ret = LP_generate(&ctx, options.site, options.login, (const char *) passwd_in);
+
+    uint8_t passwd_hash[32];
+
+    hmac_sha256(passwd_in, "", passwd_hash);
 	zeromem(passwd_in, sizeof passwd_in); // clean password read
-	
+
 	if (ret < 1)
 	{
 		// zeromem(&ctx, sizeof ctx); //no need
 		return print_error(errstr[ERR_GENERATE], ret);
 	}
-	
+
+    long unsigned int offset = 0;
+
+    for (int i = 0; ; i++) {
+        if (i != 0 && i % 3 == 0) {
+            printf("%s%s", getColor(offset), getIcon(offset));
+            offset = 0;
+            if (i == 9) break;
+        }
+        offset <<= 8;
+        offset += passwd_hash[i];
+    }
+
+    printf("\033[0m\n");
+
 	bool clipboardcopy = is_option_set(&options, OPTS_PRINT) ? false : true;
-	
+
 	if (clipboardcopy)
 	{
 		if (lpcli_clipboardcopy(ctx.buffer) != LPCLI_OK)
@@ -334,9 +392,10 @@ int lpcli_main(int argc, char **argv)
 	}
 	else
 	{
+
 		printf("%s\n", ctx.buffer);
 	}
-	
+
 	zeromem(&ctx, sizeof ctx); // clean generated password
 	return LPCLI_OK;
 }

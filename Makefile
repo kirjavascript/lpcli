@@ -1,25 +1,32 @@
 CFLAGS := -Wall -Wextra -Wvla -Wsign-conversion -pedantic -std=c99
 APPNAME := lpcli
 
-ifeq ($(OS),Windows_NT)
-	PLATFORM := win
-	RM := del /Q
-	CC := gcc
-	APPNAME := $(APPNAME).exe
+PREFIX ?= /usr
+BINDIR ?= $(PREFIX)/bin
+
+PLATFORM := posix
+ifeq ($(HAS_XCLIP), 1)
+    CFLAGS += -DUSE_XCLIP
 else
-	PLATFORM := posix
-	ifeq ($(HAS_XCLIP), 1)
-		CFLAGS := $(CFLAGS) -DUSE_XCLIP
-	else
-		CFLAGS := $(CFLAGS) -lX11
-	endif
+    CFLAGS += -lX11
 endif
 
 DEPS := lpcli.h lp.h pbkdf2_sha256.h
 CODE := lpcli_$(PLATFORM).c lpcli.c
-$(APPNAME): $(DEPS)
-$(APPNAME): $(CODE)
+
+.PHONY: all clean install uninstall
+
+all: $(APPNAME)
+
+$(APPNAME): $(DEPS) $(CODE)
 	$(CC) $(CFLAGS) -o $@ $(CODE)
 
+# Installation targets
+install: $(APPNAME)
+	install -D -m755 $(APPNAME) $(DESTDIR)$(BINDIR)/$(APPNAME)
+
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/$(APPNAME)
+
 clean:
-	$(RM) $(APPNAME)
+	rm -f $(APPNAME)
